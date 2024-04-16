@@ -2,7 +2,7 @@
 cs392 Project Final
 
 # Contributers
-[Marie] (https://github.com/MarieSAddo)
+[Marie] (https://github.com/MarieSAddo)\
 [Jeremy] 
 
 
