@@ -1,4 +1,4 @@
-# conventional_image_filter
+# convolutional_image_filter
 cs392 Project Final
 
 # Contributers
