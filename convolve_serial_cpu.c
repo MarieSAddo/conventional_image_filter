@@ -1,61 +1,124 @@
+/**run: gcc-13 -o convolve_serial_cpu convolve_serial_cpu.c -lm && ./convolve_serial_cpu**/
 #include <stdio.h>
 #include <stdlib.h>
+#include <png.h>
+#include "image.h"
+#include <time.h>
 
-// Function to perform convolution on a single pixel
-float apply_kernel(float **image, float **kernel, int x, int y, int kernel_size) {
-    float sum = 0.0;
-    int offset = kernel_size / 2;
 
-    for (int i = -offset; i <= offset; i++) {
-        for (int j = -offset; j <= offset; j++) {
-            sum += image[x + i][y + j] * kernel[offset + i][offset + j];
-        }
-    }
+#define KERNEL_SIZE 3
 
-    return sum;
-}
-
-// Convolution function
-void convolve_serial(float **image, float **output, float **kernel, int width, int height, int kernel_size) {
-    int offset = kernel_size / 2;
-
-    // Apply kernel to each pixel
-    for (int i = offset; i < height - offset; i++) {
-        for (int j = offset; j < width - offset; j++) {
-            output[i][j] = apply_kernel(image, kernel, i, j, kernel_size);
-        }
-    }
-}
-
-int main() {
-    int width, height, kernel_size;
-    float **image, **output, **kernel;
-
-    // Assume functions to read the image into 'image' buffer and kernel into 'kernel' buffer
-    // read_image("path_to_image", &image, &width, &height);
-    // read_kernel("path_to_kernel", &kernel, &kernel_size);
-
-    // Allocate memory for the output buffer
-    output = (float **)malloc(height * sizeof(float *));
-    for (int i = 0; i < height; i++) {
-        output[i] = (float *)malloc(width * sizeof(float));
-    }
+void convolve(Image *img, Image *output_img)
+{
+    // Define the sharpening kernel
+    int kernel[KERNEL_SIZE][KERNEL_SIZE] = {{0, -1, 0},
+                                            {-1, 5, -1},
+                                            {0, -1, 0}};
 
     // Perform convolution
-    convolve(image, output, kernel, width, height, kernel_size);
+    for (int i = 0; i < img->height; i++)
+    {
+        for (int j = 0; j < img->width; j++)
+        {
+            // Initialize the output pixel value
+            int output_pixel = 0;
 
-    // Assume function to write the output buffer to an image file
-    // write_image("path_to_output_image", output, width, height);
+            // Iterate over the kernel
+            for (int k = 0; k < KERNEL_SIZE; k++)
+            {
+                for (int l = 0; l < KERNEL_SIZE; l++)
+                {
+                    // Calculate the coordinates of the pixel in the input image
+                    int x_index = i + k - KERNEL_SIZE / 2;
+                    int y_index = j + l - KERNEL_SIZE / 2;
 
-    // Free allocated memory
-    for (int i = 0; i < height; i++) {
-        free(image[i]);
-        free(output[i]);
-        free(kernel[i]);
+                    // Check if the pixel is within the bounds of the image
+                    if (x_index >= 0 && x_index < img->height && y_index >= 0 && y_index < img->width)
+                    {
+                        // Multiply the kernel value with the corresponding pixel value in the input image
+                        output_pixel += kernel[k][l] * img->data[x_index][y_index];
+                    }
+                }
+            }
+
+            // Set the output pixel value in the output image
+            output_img->data[i][j] = output_pixel;
+            img = mpimg.imread('output.png')
+            plt.figure(figsize=(10, 10))
+            imgplot = plt.imshow(img)
+            plt.show()
+            // if (output_pixel != 0)
+            // {
+            //     fprintf(file, "Pixel at (%d, %d) was successfully sharpened.\n", i, j);
+            // }
+            // else
+            // {
+            //     fprintf(file, "Pixel at (%d, %d) was not sharpened.\n", i, j);
+            // }
+        }
     }
-    free(image);
-    free(output);
-    free(kernel);
+}
 
+
+// void write_results_to_file(const char *filename, const char *results) {
+//     FILE *file = fopen(filename, "a");
+//     if (file == NULL) {
+//         printf("Error opening file!\n");
+//         return;
+//     }
+
+//     // Get the current time
+//     time_t t = time(NULL);
+//     struct tm *tm = localtime(&t);
+//     char time_str[64];
+//     strftime(time_str, sizeof(time_str), "%c", tm);
+
+//     // Write the time and results to the file
+//     fprintf(file, "## %s\n\n", time_str);
+//     fprintf(file, "%s\n", results);
+
+//     fclose(file);
+// }
+
+int main()
+{
+    // Read the PNG file
+    Image img;
+    read_png_file("saddog.png", PNG_COLOR_TYPE_RGB, &img);
+
+    // Allocate memory for the output image
+    Image output_img;
+    output_img.width = img.width;
+    output_img.height = img.height;
+    output_img.color_type = PNG_COLOR_TYPE_RGB;
+    malloc_image_data(&output_img);
+
+    // check if the data field of img and output_img are not null
+    if (img.data == NULL || output_img.data == NULL)
+    {
+        printf("Error: Memory not allocated for image data\n");
+        return 1;
+    }
+
+    // Open the results file
+    // FILE *file = fopen("results.md", "a");
+    // if (file == NULL)
+    // {
+    //     printf("Error opening file!\n");
+    //     return 1;
+    // }
+    // Perform convolution
+    convolve(&img, &output_img);
+    
+
+    // Write the output image to a new JPEG file
+    write_png_file("output.png", &output_img);
+
+    // Write the results to a results to a markdown file
+    // write_results_to_file("results.md", "Here are the results...");
+
+    // Free the memory allocated for the images
+    free_image_data(&img);
+    free_image_data(&output_img);
     return 0;
 }

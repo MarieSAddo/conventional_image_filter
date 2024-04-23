@@ -8,13 +8,13 @@ cs392 Project Final
 
 # Resources
 https://github.com/jimouris/parallel-convolution
-https://github.com/topics/parallel-processing?l=c
-https://github.com/topics/image-convolution
 https://stackoverflow.com/questions/58926559/blurring-an-image-with-c
 https://learnopencv.com/image-filtering-using-convolution-in-opencv/
 https://stackoverflow.com/questions/58252334/convolution-for-image-filtering
 https://medium.com/@henriquevedoveli/image-filtering-techniques-in-image-processing-part-1-d03362fc73b7
 https://ulhpc-tutorials.readthedocs.io/en/latest/cuda/exercises/convolution/
+https://github.com/jasrodis/mpi-image-convolution
+https://github.com/KHvic/Image-Convolution-GPU-vs-CPU
 
 # Will add Project pdf to the project 
 
