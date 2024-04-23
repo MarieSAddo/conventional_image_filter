@@ -7,37 +7,32 @@
 
 #define KERNEL_SIZE 3
 
-int clamp(int value, int min, int max) {
+int clamp(double value, int min, int max) {
     if (value < min)
         return min;
     else if (value > max)
         return max;
     else
-        return value;
+        return (int)value;
 }
 
-void convolve(Image *img, Image *output_img)
+void convolve(Image *img, double kernel [KERNEL_SIZE][KERNEL_SIZE], int kernel_size, Image *output_img)
 {
-    // Define the sharpening kernel
-    int kernel[KERNEL_SIZE][KERNEL_SIZE] = {
-        {0, -1, 0},
-        {-1, 5, -1},
-        {0, -1, 0}};
     // Perform convolution
-    for (int i = 0; i < img->height; i++)
+    for (int i = 0; i < img->height; i++) // Iterate over the rows of the image
     {
         for (int j = 0; j < img->width; j++)
         {
             // Initialize the output pixel value
-            int output_pixel = 0;
+            double output_pixel = 0;
             // Iterate over the kernel
-            for (int k = 0; k < KERNEL_SIZE; k++)
+            for (int k = 0; k < kernel_size; k++) // Iterate over the rows of the kernel
             {
-                for (int l = 0; l < KERNEL_SIZE; l++)
+                for (int l = 0; l < kernel_size; l++) // Iterate over the columns of the kernel
                 {
                     // Calculate the coordinates of the pixel in the input image
-                    int x_index = i + k - KERNEL_SIZE / 2;
-                    int y_index = j + l - KERNEL_SIZE / 2;
+                    int x_index = i + k - kernel_size / 2; 
+                    int y_index = j + l - kernel_size / 2;
                     // Check if the pixel is within the bounds of the image
                     if (x_index >= 0 && x_index < img->height && y_index >= 0 && y_index < img->width)
                     {
@@ -48,8 +43,7 @@ void convolve(Image *img, Image *output_img)
             }
             // Set the output pixel value in the output image
             // Ensure the output_pixel value is within the range of pixel values
-            output_pixel = clamp(output_pixel, 0, 255); // You need to implement clamp function
-            output_img->data[i][j] = output_pixel;
+            output_img->data[i][j] = clamp(output_pixel, 0, 255); // You need to implement clamp function;
         }
     }
 }
@@ -78,13 +72,13 @@ int main()
 {
     // Read the PNG file
     Image img;
-    read_png_file("saddog.png", PNG_COLOR_TYPE_RGB, &img);
+    read_png_file("image1.png", PNG_COLOR_TYPE_GRAY, &img);
 
     // Allocate memory for the output image
     Image output_img;
     output_img.width = img.width;
     output_img.height = img.height;
-    output_img.color_type = PNG_COLOR_TYPE_RGB;
+    output_img.color_type = PNG_COLOR_TYPE_GRAY;
     malloc_image_data(&output_img);
 
     // check if the data field of img and output_img are not null
@@ -94,8 +88,16 @@ int main()
         return 1;
     }
 
+
+    // Define the sharpening kernel
+    double kernel[KERNEL_SIZE][KERNEL_SIZE] = {
+        {0, -1, 0},
+        {-1, 5, -1},
+        {0, -1, 0}};
+
+
     // Perform convolution
-    convolve(&img, &output_img);
+    convolve(&img, kernel, KERNEL_SIZE, &output_img);
 
     // Write the output image to a new JPEG file
     write_png_file("output.png", &output_img);
