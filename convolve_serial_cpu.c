@@ -7,6 +7,15 @@
 
 #define KERNEL_SIZE 3
 
+int clamp(int value, int min, int max) {
+    if (value < min)
+        return min;
+    else if (value > max)
+        return max;
+    else
+        return value;
+}
+
 void convolve(Image *img, Image *output_img)
 {
     // Define the sharpening kernel
@@ -38,6 +47,8 @@ void convolve(Image *img, Image *output_img)
                 }
             }
             // Set the output pixel value in the output image
+            // Ensure the output_pixel value is within the range of pixel values
+            output_pixel = clamp(output_pixel, 0, 255); // You need to implement clamp function
             output_img->data[i][j] = output_pixel;
         }
     }
