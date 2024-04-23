@@ -4,6 +4,8 @@
 #include <png.h>
 #include "image.h"
 #include <time.h>
+#include "kernels.h"
+#include <string.h>
 
 #define KERNEL_SIZE 3
 
@@ -16,7 +18,7 @@ int clamp(double value, int min, int max) {
         return (int)value;
 }
 
-void convolve(Image *img, double kernel [KERNEL_SIZE][KERNEL_SIZE], int kernel_size, Image *output_img)
+void convolve(Image *img, double** kernel, int kernel_size, Image *output_img)
 {
     // Perform convolution
     for (int i = 0; i < img->height; i++) // Iterate over the rows of the image
@@ -37,7 +39,8 @@ void convolve(Image *img, double kernel [KERNEL_SIZE][KERNEL_SIZE], int kernel_s
                     if (x_index >= 0 && x_index < img->height && y_index >= 0 && y_index < img->width)
                     {
                         // Multiply the kernel value with the corresponding pixel value in the input image
-                        output_pixel += kernel[k][l] * img->data[x_index][y_index];
+                        output_pixel += kernel[k][l] * (double)img->data[x_index][y_index];
+                        
                     }
                 }
             }
@@ -68,12 +71,37 @@ void convolve(Image *img, double kernel [KERNEL_SIZE][KERNEL_SIZE], int kernel_s
 //     fclose(file);
 // }
 
+void free_kernel(double** kernel, int size) {
+    free(kernel);
+}
+
 int main()
 {
+    int kernel_size = (rand() % 5) * 2 + 3;// Randomly generate a kernel size between 3 and 11 that is an odd number
     // Read the PNG file
     Image img;
     read_png_file("image1.png", PNG_COLOR_TYPE_GRAY, &img);
 
+    // Prompt user to enter a kernel type they want to use
+   char kernel_name[50];
+    printf("Enter the type of kernel you want to use (gauss, unsharpen_mask, mean): ");    
+    scanf("%s", kernel_name);
+
+    //Generate kernel based on the user input
+    double** kernel;
+    
+    if (strcmp(kernel_name, "gauss") == 0) {
+        kernel = gauss_kernel(kernel_size);
+    } else if (strcmp(kernel_name, "unsharpen_mask") == 0) {
+        kernel = unsharpen_mask_kernel(kernel_size);
+    } else if (strcmp(kernel_name, "mean") == 0) {
+        kernel = mean_kernel(kernel_size);
+    } else {
+        printf("Invalid kernel type\n");
+        return 1;
+    }
+    
+    
     // Allocate memory for the output image
     Image output_img;
     output_img.width = img.width;
@@ -89,18 +117,17 @@ int main()
     }
 
 
-    // Define the sharpening kernel
-    double kernel[KERNEL_SIZE][KERNEL_SIZE] = {
-        {0, -1, 0},
-        {-1, 5, -1},
-        {0, -1, 0}};
-
-
     // Perform convolution
-    convolve(&img, kernel, KERNEL_SIZE, &output_img);
+    convolve(&img, kernel, kernel_size, &output_img);
 
     // Write the output image to a new JPEG file
-    write_png_file("output.png", &output_img);
+    //write_png_file("output.png", &output_img);
+
+    // write to an output file based on the kernel type
+    char output_file[50];
+    sprintf(output_file, "output_%s.png", kernel_name);
+    write_png_file(output_file, &output_img);
+
 
     // Write the results to a results to a markdown file
     // write_results_to_file("results.md", "Here are the results...");
@@ -108,5 +135,6 @@ int main()
     // Free the memory allocated for the images
     free_image_data(&img);
     free_image_data(&output_img);
+    free_kernel(kernel, kernel_size);
     return 0;
 }
