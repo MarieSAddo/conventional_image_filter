@@ -6,5 +6,4 @@ gcc -Wall -O3 $(libpng-config --I_opts) image.c convolve_serial_cpu.c -o my_prog
 # Run the C program
 ./my_program saddog.png output.png
 
-# Run the Python program
-python3 display_image.py
+

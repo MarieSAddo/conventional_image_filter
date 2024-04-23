@@ -5,16 +5,15 @@
 #include "image.h"
 #include <time.h>
 
-
 #define KERNEL_SIZE 3
 
 void convolve(Image *img, Image *output_img)
 {
     // Define the sharpening kernel
-    int kernel[KERNEL_SIZE][KERNEL_SIZE] = {{0, -1, 0},
-                                            {-1, 5, -1},
-                                            {0, -1, 0}};
-
+    int kernel[KERNEL_SIZE][KERNEL_SIZE] = {
+        {0, -1, 0},
+        {-1, 5, -1},
+        {0, -1, 0}};
     // Perform convolution
     for (int i = 0; i < img->height; i++)
     {
@@ -22,7 +21,6 @@ void convolve(Image *img, Image *output_img)
         {
             // Initialize the output pixel value
             int output_pixel = 0;
-
             // Iterate over the kernel
             for (int k = 0; k < KERNEL_SIZE; k++)
             {
@@ -31,7 +29,6 @@ void convolve(Image *img, Image *output_img)
                     // Calculate the coordinates of the pixel in the input image
                     int x_index = i + k - KERNEL_SIZE / 2;
                     int y_index = j + l - KERNEL_SIZE / 2;
-
                     // Check if the pixel is within the bounds of the image
                     if (x_index >= 0 && x_index < img->height && y_index >= 0 && y_index < img->width)
                     {
@@ -40,25 +37,11 @@ void convolve(Image *img, Image *output_img)
                     }
                 }
             }
-
             // Set the output pixel value in the output image
             output_img->data[i][j] = output_pixel;
-            img = mpimg.imread('output.png')
-            plt.figure(figsize=(10, 10))
-            imgplot = plt.imshow(img)
-            plt.show()
-            // if (output_pixel != 0)
-            // {
-            //     fprintf(file, "Pixel at (%d, %d) was successfully sharpened.\n", i, j);
-            // }
-            // else
-            // {
-            //     fprintf(file, "Pixel at (%d, %d) was not sharpened.\n", i, j);
-            // }
         }
     }
 }
-
 
 // void write_results_to_file(const char *filename, const char *results) {
 //     FILE *file = fopen(filename, "a");
@@ -100,16 +83,8 @@ int main()
         return 1;
     }
 
-    // Open the results file
-    // FILE *file = fopen("results.md", "a");
-    // if (file == NULL)
-    // {
-    //     printf("Error opening file!\n");
-    //     return 1;
-    // }
     // Perform convolution
     convolve(&img, &output_img);
-    
 
     // Write the output image to a new JPEG file
     write_png_file("output.png", &output_img);
