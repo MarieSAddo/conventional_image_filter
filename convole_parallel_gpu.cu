@@ -95,10 +95,21 @@ int main() {
     inputImage = (int*)malloc(imageSize);
     outputImage = (int*)malloc(imageSize);
 
-    // Initialize input image with random values
-    for (int i = 0; i < width * height; i++) {
-        inputImage[i] = rand() % 256; // Assuming pixel values are between 0 and 255
+    // Prompt user to enter image file name
+    char imageFileName[100];
+    printf("Enter the image file name: ");
+    scanf("%s", imageFileName);
+
+    // Load the image from file
+    FILE *file = fopen(imageFileName, "rb");
+    if (file == NULL) {
+        printf("Error opening image file. Exiting...\n");
+        return -1;
     }
+
+    // Read pixel values from the image file
+    fread(inputImage, sizeof(int), width * height, file);
+    fclose(file);
 
     // Prompt user to choose kernel type
     char kernel_name[50];
@@ -119,6 +130,19 @@ int main() {
         printf("Invalid kernel name. Exiting...\n");
         return -1;
     }
+
+    // Write the output image to a fixed output file
+    char outputFileName[] = "output_image_gpu.png";
+
+    FILE *outputFile = fopen(outputFileName, "wb");
+    if (outputFile == NULL) {
+        printf("Error creating output image file. Exiting...\n");
+        return -1;
+    }
+
+    // Write pixel values to the output image file
+    fwrite(outputImage, sizeof(int), width * height, outputFile);
+    fclose(outputFile);
 
     // Free allocated memory
     free(inputImage);
