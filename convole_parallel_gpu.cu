@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <cuda_runtime.h>
 #include <stdlib.h> // Include for malloc and free
+#include <string.h> // Include for strcmp
+#include <sys/time.h> // Include for timing
 
 // CUDA Kernel for convolution
 __global__ void convolutionKernel(int *inputImage, int *outputImage, int width, int height) {
@@ -24,7 +26,7 @@ __global__ void convolutionKernel(int *inputImage, int *outputImage, int width, 
 }
 
 // Host function to run the convolution on the GPU
-void convolve_gpu(int *inputImage, int *outputImage, int width, int height) {
+void convolve_gpu(int *inputImage, int *outputImage, int width, int height, int (*kernel)(int*, int, int, int, int)) {
     int imageSize = width * height * sizeof(int);
 
     // Allocate memory for the input and output images
@@ -39,9 +41,18 @@ void convolve_gpu(int *inputImage, int *outputImage, int width, int height) {
     dim3 blockSize(16, 16);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
+    // Start timer
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+
     // Launch convolution kernel
     convolutionKernel<<<gridSize, blockSize>>>(d_inputImage, d_outputImage, width, height);
     cudaDeviceSynchronize();
+
+    // End timer
+    gettimeofday(&end, NULL);
+    float elapsed = (end.tv_sec - start.tv_sec) * 1000.0; // sec to ms
+    elapsed += (end.tv_usec - start.tv_usec) / 1000.0;    // us to ms
 
     // Copy output image from device memory to host memory
     cudaMemcpy(outputImage, d_outputImage, imageSize, cudaMemcpyDeviceToHost);
@@ -49,6 +60,29 @@ void convolve_gpu(int *inputImage, int *outputImage, int width, int height) {
     // Free device memory
     cudaFree(d_inputImage);
     cudaFree(d_outputImage);
+
+    printf("Convolution completed in %.2f milliseconds.\n", elapsed);
+}
+
+// Example Gaussian kernel
+__device__ int gauss_kernel(int *inputImage, int col, int row, int width, int height) {
+    int sum = 0;
+    // Placeholder implementation
+    return sum;
+}
+
+// Example unsharp mask kernel
+__device__ int unsharpen_mask_kernel(int *inputImage, int col, int row, int width, int height) {
+    int sum = 0;
+    // Placeholder implementation
+    return sum;
+}
+
+// Example mean kernel
+__device__ int mean_kernel(int *inputImage, int col, int row, int width, int height) {
+    int sum = 0;
+    // Placeholder implementation
+    return sum;
 }
 
 int main() {
@@ -66,11 +100,25 @@ int main() {
         inputImage[i] = rand() % 256; // Assuming pixel values are between 0 and 255
     }
 
-    // Run convolution on the GPU
-    convolve_gpu(inputImage, outputImage, width, height);
+    // Prompt user to choose kernel type
+    char kernel_name[50];
+    printf("Enter the type of kernel you want to use (gauss, unsharpen_mask, mean): ");
+    scanf("%s", kernel_name);
 
-    // Output the result
-    printf("Convolution completed.\n");
+    // Run convolution on the GPU
+    if (strcmp(kernel_name, "gauss") == 0) {
+        // Call function with Gaussian kernel
+        convolve_gpu(inputImage, outputImage, width, height, gauss_kernel);
+    } else if (strcmp(kernel_name, "unsharpen_mask") == 0) {
+        // Call function with unsharp mask kernel
+        convolve_gpu(inputImage, outputImage, width, height, unsharpen_mask_kernel);
+    } else if (strcmp(kernel_name, "mean") == 0) {
+        // Call function with mean kernel
+        convolve_gpu(inputImage, outputImage, width, height, mean_kernel);
+    } else {
+        printf("Invalid kernel name. Exiting...\n");
+        return -1;
+    }
 
     // Free allocated memory
     free(inputImage);
