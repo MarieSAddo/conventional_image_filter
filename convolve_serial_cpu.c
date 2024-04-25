@@ -1,4 +1,7 @@
-/**run: gcc-13 -o convolve_serial_cpu convolve_serial_cpu.c -lm && ./convolve_serial_cpu**/
+/*This is a serial implementation of the convolution operation on an image using the CPU.
+This program reads an image from a PNG file, performs convolution on the image using a kernel of a specified type, 
+and writes the output image to a new PNG file. It also writes the results to a serialized markdown file.
+*run: gcc-13 -o convolve_serial_cpu convolve_serial_cpu.c -lm && ./convolve_serial_cpu**/
 #include <stdio.h>
 #include <stdlib.h>
 #include <png.h>
@@ -46,32 +49,14 @@ void convolve(Image *img, double** kernel, int kernel_size, Image *output_img)
             }
             // Set the output pixel value in the output image
             // Ensure the output_pixel value is within the range of pixel values
-            output_img->data[i][j] = clamp(output_pixel, 0, 255); // You need to implement clamp function;
+            output_img->data[i][j] = (unsigned char)clamp(output_pixel, 0, 255); // You need to implement clamp function;
+        
         }
     }
 }
 
-// void write_results_to_file(const char *filename, const char *results) {
-//     FILE *file = fopen(filename, "a");
-//     if (file == NULL) {
-//         printf("Error opening file!\n");
-//         return;
-//     }
 
-//     // Get the current time
-//     time_t t = time(NULL);
-//     struct tm *tm = localtime(&t);
-//     char time_str[64];
-//     strftime(time_str, sizeof(time_str), "%c", tm);
-
-//     // Write the time and results to the file
-//     fprintf(file, "## %s\n\n", time_str);
-//     fprintf(file, "%s\n", results);
-
-//     fclose(file);
-// }
-
-void free_kernel(double** kernel, int size) {
+void free_kernel(double** kernel) {
     free(kernel);
 }
 
@@ -80,7 +65,7 @@ int main()
     int kernel_size = (rand() % 5) * 2 + 3;// Randomly generate a kernel size between 3 and 11 that is an odd number
     // Read the PNG file
     Image img;
-    read_png_file("image1.png", PNG_COLOR_TYPE_GRAY, &img);
+    read_png_file("crunchycat_large.png", PNG_COLOR_TYPE_GRAY, &img);
 
     // Prompt user to enter a kernel type they want to use
    char kernel_name[50];
@@ -135,6 +120,6 @@ int main()
     // Free the memory allocated for the images
     free_image_data(&img);
     free_image_data(&output_img);
-    free_kernel(kernel, kernel_size);
+    free_kernel(kernel);
     return 0;
 }
