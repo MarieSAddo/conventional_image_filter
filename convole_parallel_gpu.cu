@@ -1,152 +1,152 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h> // For directory handling
+#include <string.h>
+#include <png.h>
+#include "image.h"
+#include <time.h>
 #include <cuda_runtime.h>
-#include <stdlib.h> // Include for malloc and free
-#include <string.h> // Include for strcmp
-#include <sys/time.h> // Include for timing
 
-// CUDA Kernel for convolution
-__global__ void convolutionKernel(int *inputImage, int *outputImage, int width, int height) {
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
+#define KERNEL_SIZE 3
 
-    if (col < width && row < height) {
-        int sum = 0;
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
-                int xIndex = col + i;
-                int yIndex = row + j;
-                // Check boundary conditions
-                if (xIndex >= 0 && yIndex >= 0 && xIndex < width && yIndex < height) {
-                    sum += inputImage[yIndex * width + xIndex];
+// CUDA kernel for convolution
+__global__ void convolutionKernel(const unsigned char* img, const double* kernel, int imgWidth, int imgHeight, unsigned char* output) {
+    // Calculate the index of the thread
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int idy = blockIdx.y * blockDim.y + threadIdx.y;
+    
+    if (idx < imgWidth && idy < imgHeight) {
+        // Initialize the output pixel value
+        double output_pixel = 0;
+        // Calculate the coordinates of the pixel in the input image
+        int x_index = idy - KERNEL_SIZE / 2;
+        int y_index = idx - KERNEL_SIZE / 2;
+        // Iterate over the kernel
+        for (int k = 0; k < KERNEL_SIZE; k++) // Iterate over the rows of the kernel
+        {
+            for (int l = 0; l < KERNEL_SIZE; l++) // Iterate over the columns of the kernel
+            {
+                // Check if the pixel is within the bounds of the image
+                int x_temp = x_index + k;
+                int y_temp = y_index + l;
+                if (x_temp >= 0 && x_temp < imgHeight && y_temp >= 0 && y_temp < imgWidth)
+                {
+                    // Multiply the kernel value with the corresponding pixel value in the input image
+                    output_pixel += kernel[k * KERNEL_SIZE + l] * (double)img[x_temp * imgWidth + y_temp];
                 }
             }
         }
-        outputImage[row * width + col] = sum / 9; // Assuming a 3x3 kernel
+        // Set the output pixel value in the output image
+        // Ensure the output_pixel value is within the range of pixel values
+        output[idy * imgWidth + idx] = (unsigned char)clamp(output_pixel, 0, 255);
     }
 }
 
-// Host function to run the convolution on the GPU
-void convolve_gpu(int *inputImage, int *outputImage, int width, int height, int (*kernel)(int*, int, int, int, int)) {
-    int imageSize = width * height * sizeof(int);
+void convolve(Image *img, double *kernel, int kernel_size, Image *output_img) {
+    // Define CUDA memory pointers
+    unsigned char *d_img, *d_output;
+    double *d_kernel;
 
-    // Allocate memory for the input and output images
-    int *d_inputImage, *d_outputImage;
-    cudaMalloc((void **)&d_inputImage, imageSize);
-    cudaMalloc((void **)&d_outputImage, imageSize);
+    // Allocate GPU memory
+    cudaMalloc((void**)&d_img, img->width * img->height * sizeof(unsigned char));
+    cudaMalloc((void**)&d_kernel, kernel_size * kernel_size * sizeof(double));
+    cudaMalloc((void**)&d_output, output_img->width * output_img->height * sizeof(unsigned char));
 
-    // Copy input image to device memory
-    cudaMemcpy(d_inputImage, inputImage, imageSize, cudaMemcpyHostToDevice);
+    // Transfer data from CPU to GPU
+    cudaMemcpy(d_img, img->data[0], img->width * img->height * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_kernel, kernel, kernel_size * kernel_size * sizeof(double), cudaMemcpyHostToDevice);
 
-    // Define block size and grid size
+    // Define block and grid dimensions
     dim3 blockSize(16, 16);
-    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
+    dim3 gridSize((img->width + blockSize.x - 1) / blockSize.x, (img->height + blockSize.y - 1) / blockSize.y);
 
-    // Start timer
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
+    // Launch CUDA kernel
+    convolutionKernel<<<gridSize, blockSize>>>(d_img, d_kernel, img->width, img->height, d_output);
 
-    // Launch convolution kernel
-    convolutionKernel<<<gridSize, blockSize>>>(d_inputImage, d_outputImage, width, height);
-    cudaDeviceSynchronize();
+    // Transfer results back from GPU to CPU
+    cudaMemcpy(output_img->data[0], d_output, output_img->width * output_img->height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
-    // End timer
-    gettimeofday(&end, NULL);
-    float elapsed = (end.tv_sec - start.tv_sec) * 1000.0; // sec to ms
-    elapsed += (end.tv_usec - start.tv_usec) / 1000.0;    // us to ms
-
-    // Copy output image from device memory to host memory
-    cudaMemcpy(outputImage, d_outputImage, imageSize, cudaMemcpyDeviceToHost);
-
-    // Free device memory
-    cudaFree(d_inputImage);
-    cudaFree(d_outputImage);
-
-    printf("Convolution completed in %.2f milliseconds.\n", elapsed);
-}
-
-// Example Gaussian kernel
-__device__ int gauss_kernel(int *inputImage, int col, int row, int width, int height) {
-    int sum = 0;
-    // Placeholder implementation
-    return sum;
-}
-
-// Example unsharp mask kernel
-__device__ int unsharpen_mask_kernel(int *inputImage, int col, int row, int width, int height) {
-    int sum = 0;
-    // Placeholder implementation
-    return sum;
-}
-
-// Example mean kernel
-__device__ int mean_kernel(int *inputImage, int col, int row, int width, int height) {
-    int sum = 0;
-    // Placeholder implementation
-    return sum;
+    // Free GPU memory
+    cudaFree(d_img);
+    cudaFree(d_kernel);
+    cudaFree(d_output);
 }
 
 int main() {
-    int width = 1024; // Width of the image
-    int height = 1024; // Height of the image
-    int imageSize = width * height * sizeof(int);
+    srand(0);
 
-    // Allocate memory for the input and output images
-    int *inputImage, *outputImage;
-    inputImage = (int*)malloc(imageSize);
-    outputImage = (int*)malloc(imageSize);
-
-    // Prompt user to enter image file name
-    char imageFileName[100];
-    printf("Enter the image file name: ");
-    scanf("%s", imageFileName);
-
-    // Load the image from file
-    FILE *file = fopen(imageFileName, "rb");
-    if (file == NULL) {
-        printf("Error opening image file. Exiting...\n");
-        return -1;
+    // Open the "images" directory
+    DIR *dir = opendir("images");
+    if (dir == NULL) {
+        printf("Error opening images directory\n");
+        return 1;
     }
 
-    // Read pixel values from the image file
-    fread(inputImage, sizeof(int), width * height, file);
-    fclose(file);
+    // Array to store kernel names (assuming a limited number of kernels)
+    char kernel_names[3][50] = {"gauss", "unsharpen_mask", "mean"};
 
-    // Prompt user to choose kernel type
-    char kernel_name[50];
-    printf("Enter the type of kernel you want to use (gauss, unsharpen_mask, mean): ");
-    scanf("%s", kernel_name);
+    // Loop through all files in the directory
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue; // Skip "." and ".." entries
+        }
 
-    // Run convolution on the GPU
-    if (strcmp(kernel_name, "gauss") == 0) {
-        // Call function with Gaussian kernel
-        convolve_gpu(inputImage, outputImage, width, height, gauss_kernel);
-    } else if (strcmp(kernel_name, "unsharpen_mask") == 0) {
-        // Call function with unsharp mask kernel
-        convolve_gpu(inputImage, outputImage, width, height, unsharpen_mask_kernel);
-    } else if (strcmp(kernel_name, "mean") == 0) {
-        // Call function with mean kernel
-        convolve_gpu(inputImage, outputImage, width, height, mean_kernel);
-    } else {
-        printf("Invalid kernel name. Exiting...\n");
-        return -1;
+        // Check if the entry is a regular file (image)
+        if (entry->d_type & DT_REG) {
+            char image_path[128];
+            sprintf(image_path, "images/%s", entry->d_name);
+
+            // Read the image
+            Image img;
+            read_png_file(image_path, PNG_COLOR_TYPE_GRAY, &img);
+
+            // Loop through each kernel type
+            for (int i = 0; i < 3; i++) {
+                double *kernel = NULL;
+                if (strcmp(kernel_names[i], "gauss") == 0) {
+                    kernel = gauss_kernel(KERNEL_SIZE);
+                } else if (strcmp(kernel_names[i], "unsharpen_mask") == 0) {
+                    kernel = unsharpen_mask_kernel(KERNEL_SIZE);
+                } else if (strcmp(kernel_names[i], "mean") == 0) {
+                    kernel = mean_kernel(KERNEL_SIZE);
+                }
+
+                // Allocate memory for the output image
+                Image output_img;
+                output_img.width = img.width;
+                output_img.height = img.height;
+                output_img.color_type = PNG_COLOR_TYPE_GRAY;
+                malloc_image_data(&output_img);
+
+                // Perform convolution
+                clock_t start_time = clock();
+                convolve(&img, kernel, KERNEL_SIZE, &output_img);
+                clock_t end_time = clock();
+                double elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+
+                // Write results to the markdown file
+                FILE *f = fopen("serial_cpu_time.md", "a");
+                if (f != NULL) {
+                    int result = fprintf(f, "%s, %s, %f, %d\n", entry->d_name, kernel_names[i], elapsed_time, KERNEL_SIZE);
+                    if (result < 0) {
+                        perror("Error writing to file");
+                    } else {
+                        printf("Successfully wrote to file.\n");
+                    }
+                    fclose(f);
+                } else {
+                    perror("Error opening file");
+                }
+
+                // Free memory
+                free_image_data(&output_img);
+                free(kernel);
+            }
+        }
     }
 
-    // Write the output image to a fixed output file
-    char outputFileName[] = "output_image_gpu.png";
-
-    FILE *outputFile = fopen(outputFileName, "wb");
-    if (outputFile == NULL) {
-        printf("Error creating output image file. Exiting...\n");
-        return -1;
-    }
-
-    // Write pixel values to the output image file
-    fwrite(outputImage, sizeof(int), width * height, outputFile);
-    fclose(outputFile);
-
-    // Free allocated memory
-    free(inputImage);
-    free(outputImage);
+    closedir(dir);
 
     return 0;
 }
