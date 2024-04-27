@@ -7,7 +7,8 @@
 #include <time.h>
 #include "kernels.h"
 
-#define KERNEL_SIZE 3
+#define KERNEL_SIZE 25
+
 
 int clamp(double value, int min, int max)
 {

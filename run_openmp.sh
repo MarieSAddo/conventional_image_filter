@@ -1,8 +1,20 @@
-# Compile the C program with OpenMP
-gcc-13 -Wall -O3 $(libpng-config --I_opts) -fopenmp image.c kernels.c convolve_parallel_openmp.c -o openmp_program $(libpng-config --L_opts) -lpng
+#!/bin/bash 
+#SBATCH -p shared
+#SBATCH --nodes 2           
+#SBATCH --tasks-per-node=2
+#SBATCH -t 01:00:00
+#SBATCH -A mor101
+#SBATCH -o %x.%j.out
+#SBATCH -e %x.%j.err
+#SBATCH --export=ALL
+
+module load intelmpi
+module load openmpi/4.1.6
+
+gcc -Wall -O3 $(libpng-config --I_opts) -fopenmp image.c kernels.c convolve_parallel_openmp.c -o openmp_program $(libpng-config --L_opts) -lpng
 
 # Run the C program
-./openmp_program 128 256 3
+srun -n 4 –cpus-per-task 2 ./openmp_program 
 
 
 # // void write_results_to_file(const char *filename, const char *results) {
