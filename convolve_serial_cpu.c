@@ -1,3 +1,4 @@
+// to compile 
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h> // For directory handling
@@ -6,8 +7,6 @@
 #include "image.h"
 #include <time.h>
 #include "kernels.h"
-
-#define KERNEL_SIZE 25
 
 
 int clamp(double value, int min, int max)
@@ -74,6 +73,8 @@ int main()
     // Array to store kernel names (assuming a limited number of kernels)
     char kernel_names[3][50] = {"gauss", "unsharpen_mask", "mean"};
 
+    int kernel_sizes[] = { 3, 9, 15, 25, 49 };
+
     // Loop through all files in the directory
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL)
@@ -96,69 +97,71 @@ int main()
             // Loop through each kernel type
             for (int i = 0; i < 3; i++)
             {
-                double **kernel = NULL;
-                if (strcmp(kernel_names[i], "gauss") == 0)
-                {
-                    kernel = gauss_kernel(KERNEL_SIZE);
-                }
-                else if (strcmp(kernel_names[i], "unsharpen_mask") == 0)
-                {
-                    kernel = unsharpen_mask_kernel(KERNEL_SIZE);
-                }
-                else if (strcmp(kernel_names[i], "mean") == 0)
-                {
-                    kernel = mean_kernel(KERNEL_SIZE);
-                }
-
-                // Allocate memory for the output image
-                Image output_img;
-                output_img.width = img.width;
-                output_img.height = img.height;
-                output_img.color_type = PNG_COLOR_TYPE_GRAY;
-                malloc_image_data(&output_img);
-
-                // Perform convolution
-                clock_t start_time = clock();
-                convolve(&img, kernel, KERNEL_SIZE, &output_img);
-                clock_t end_time = clock();
-                double elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
-
-                // Write results to the markdown file
-                // Write results to the markdown file
-                FILE *f = fopen("serial_cpu_time.md", "a");
-                if (f != NULL)
-                {
-                    int result = fprintf(f, "%s, %s, %f, %d\n", entry->d_name, kernel_names[i], elapsed_time, KERNEL_SIZE);
-                    if (result < 0)
+                for (int j = 0; j < sizeof(kernel_sizes)/sizeof(kernel_sizes[0]); j++) {
+                    double **kernel = NULL;
+                    if (strcmp(kernel_names[i], "gauss") == 0)
                     {
-                        perror("Error writing to file");
+                        kernel = gauss_kernel(kernel_sizes[j]);
+                    }
+                    else if (strcmp(kernel_names[i], "unsharpen_mask") == 0)
+                    {
+                        kernel = unsharpen_mask_kernel(kernel_sizes[j]);
+                    }
+                    else if (strcmp(kernel_names[i], "mean") == 0)
+                    {
+                        kernel = mean_kernel(kernel_sizes[j]);
+                    }
+
+                    // Allocate memory for the output image
+                    Image output_img;
+                    output_img.width = img.width;
+                    output_img.height = img.height;
+                    output_img.color_type = PNG_COLOR_TYPE_GRAY;
+                    malloc_image_data(&output_img);
+
+                    // Perform convolution
+                    clock_t start_time = clock();
+                    convolve(&img, kernel, kernel_sizes[j], &output_img);
+                    clock_t end_time = clock();
+                    double elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+
+                    // Write results to the markdown file
+                    // Write results to the markdown file
+                    FILE *f = fopen("serial_cpu_time.md", "a");
+                    if (f != NULL)
+                    {
+                        int result = fprintf(f, "%s, %s, %f, %d\n", entry->d_name, kernel_names[i], elapsed_time, kernel_sizes[j]);
+                        if (result < 0)
+                        {
+                            perror("Error writing to file");
+                        }
+                        else
+                        {
+                            printf("Successfully wrote to file.\n");
+                        }       
+                        fclose(f);
                     }
                     else
                     {
-                        printf("Successfully wrote to file.\n");
-                    }       
-                    fclose(f);
-                }
-                else
-                {
-                    perror("Error opening file");
-                }
-                // FILE *f = fopen("serial_cpu_time.md", "a");
-                // if (f != NULL) {
-                //     fprintf(f, "%s, %s, %f, %d\n", entry->d_name, kernel_names[i], elapsed_time, KERNEL_SIZE);
-                //     fclose(f);
-                // } else {
-                //     printf("Error opening file!\n");
-                // }
+                        perror("Error opening file");
+                    }
+                    // FILE *f = fopen("serial_cpu_time.md", "a");
+                    // if (f != NULL) {
+                    //     fprintf(f, "%s, %s, %f, %d\n", entry->d_name, kernel_names[i], elapsed_time, kernel_sizes[j]);
+                    //     fclose(f);
+                    // } else {
+                    //     printf("Error opening file!\n");
+                    // }
 
-                // // Write the output image (optional)
-                // char output_file[128];
-                // sprintf(output_file, "output_%s_%s.png", entry->d_name, kernel_names[i]);
-                // write_png_file(output_file, &output_img);
+                    // // Write the output image (optional)
+                    // char output_file[128];
+                    // sprintf(output_file, "output_%s_%s.png", entry->d_name, kernel_names[i]);
+                    // write_png_file(output_file, &output_img);
 
-                // Free memory
-                free_image_data(&output_img);
-                free_kernel(kernel);
+                    // Free memory
+                    free_image_data(&output_img);
+                    free_kernel(kernel);
+                }
             }
         }
     }

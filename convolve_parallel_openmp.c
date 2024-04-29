@@ -4,6 +4,10 @@
  * gcc-13 -o convolve_parallel_cpu convolve_parallel_cpu.c -lm -lpng -fopenmp
  * mpirun -np 4 ./convolve_parallel_cpu 128 256 3
  */
+
+/**
+ * to compile: gcc-13 -o convolve_parallel_cpu convolve_parallel_cpu.c -lm -lpng -fopenmp
+ */
 #include <stdio.h>
 #include <dirent.h>
 #include <png.h>
@@ -14,7 +18,7 @@
 #include <omp.h>
 #include <string.h>
 
-#define KERNEL_SIZE 25
+// #define KERNEL_SIZE 11
 
 int clamp(double value, int min, int max)
 {
@@ -78,6 +82,7 @@ int main()
 
     // Array to store kernel names (assuming a limited number of kernels)
     char kernel_names[3][50] = {"gauss", "unsharpen_mask", "mean"};
+    int kernel_sizes[]= {3, 9, 15, 25, 49}
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL)
     {
@@ -90,7 +95,7 @@ int main()
         if (entry->d_type & DT_REG)
         {
             char image_path[128];
-            snprintf(image_path, sizeof(image_path),"images/%s", entry->d_name);
+            snprintf(image_path, sizeof(image_path), "images/%s", entry->d_name);
 
             // Read the image
             Image img;
@@ -99,18 +104,19 @@ int main()
             // Loop through each kernel type
             for (int i = 0; i < 3; i++)
             {
+                for (int j = 0; j < sizeof(kernel_sizes)/sizeof(kernel_sizes[0]); j++) {
                 double **kernel = NULL;
                 if (strcmp(kernel_names[i], "gauss") == 0)
                 {
-                    kernel = gauss_kernel(KERNEL_SIZE);
+                    kernel = gauss_kernel(kernel_sizes[j]);
                 }
                 else if (strcmp(kernel_names[i], "unsharpen_mask") == 0)
                 {
-                    kernel = unsharpen_mask_kernel(KERNEL_SIZE);
+                    kernel = unsharpen_mask_kernel(kernel_sizes[j]);
                 }
                 else if (strcmp(kernel_names[i], "mean") == 0)
                 {
-                    kernel = mean_kernel(KERNEL_SIZE);
+                    kernel = mean_kernel(kernel_sizes[j]);
                 }
 
                 // Allocate memory for the output image
@@ -122,7 +128,7 @@ int main()
 
                 // Perform convolution
                 clock_t start_time = clock();
-                convolve(&img, kernel, KERNEL_SIZE, &output_img);
+                convolve(&img, kernel, kernel_sizes[j], &output_img);
                 clock_t end_time = clock();
                 double elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
 
@@ -131,7 +137,7 @@ int main()
                 FILE *f = fopen("parallel_cpu_time.md", "a");
                 if (f != NULL)
                 {
-                    int result = fprintf(f, "%s, %s, %f, %d\n", entry->d_name, kernel_names[i], elapsed_time, KERNEL_SIZE);
+                    int result = fprintf(f, "%s, %s, %f, %d\n", entry->d_name, kernel_names[i], elapsed_time, kernel_sizes[j]);
                     if (result < 0)
                     {
                         perror("Error writing to file");
@@ -148,6 +154,7 @@ int main()
                 }
                 free_image_data(&output_img);
                 free_kernel(kernel);
+                }
             }
         }
     }
