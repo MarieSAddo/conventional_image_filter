@@ -85,11 +85,11 @@ int main()
     {
         printf("Error: Unable to open the images directory\n");
         return 1;
-    }
+    } 
     // Array to store kernel names (assuming a limited number of kernels)
     char kernel_names[3][50] = {"gauss", "unsharpen_mask", "mean"};
 
-    int kernel_sizes[] = {3, 9, 15, 25, 49;
+    int kernel_sizes[] = {3, 9, 15, 25, 49};
     int num_sizes = sizeof(kernel_sizes) / sizeof(kernel_sizes[0]);
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL)
@@ -171,5 +171,4 @@ int main()
     }
     closedir(dir);
     return 0;
-}
 }
