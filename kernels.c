@@ -7,7 +7,7 @@
  * The size should be an odd number, so that the kernel is centered.
  */
 double** gauss_kernel(int size) {
-    double** gauss = malloc(size*sizeof(double*) + size*size*sizeof(double));
+    double** gauss = (double**)malloc(size*sizeof(double*) + size*size*sizeof(double));
     double sum = 0;
     double sigma = (size - 1) / 8.0; // radius is 4 * standard deviation
     double factor = -1/(2*sigma*sigma);
@@ -52,7 +52,7 @@ double** unsharpen_mask_kernel(int size) {
  * The size should be an odd number, so that the kernel is centered.
  */
 double** mean_kernel(int size) {
-    double** mean = malloc(size*sizeof(double*) + size*size*sizeof(double));
+    double** mean = (double**)malloc(size*sizeof(double*) + size*size*sizeof(double));
     for (int i = 0; i < size; i++) {
         mean[i] = (double*)(mean + size) + i*size;
         for (int j = 0; j < size; j++) {

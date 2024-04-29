@@ -51,32 +51,6 @@ __global__ void convolve(unsigned char *d_image, double *d_kernel, int kernelSiz
     }
 }
 
-// Launches multiple convolution kernels for each image and kernel combination
-void parallel_convolve(Image *images, int num_images, double **kernels, int num_kernels, Image *output_images)
-{
-    double *d_kernels;
-    int total_kernel_size = num_kernels * kernel_sizes * kernel_sizes;
-    cudaMalloc((void **)&d_kernels, total_kernel_size * sizeof(double));
-    cudaMemcpy(d_kernels, kernels[0], total_kernel_size * sizeof(double), cudaMemcpyHostToDevice);
-    for (int i = 0; i < num_images; i++)
-    {
-        unsigned char *d_image;
-        cudaMalloc((void **)&d_image, images[i].width * images[i].height * sizeof(unsigned char));
-        cudaMemcpy(d_image, images[i].data, images[i].width * images[i].height * sizeof(unsigned char), cudaMemcpyHostToDevice);
-        unsigned char *d_output_image;
-        cudaMalloc((void **)&d_output_image, images[i].width * images[i].height * sizeof(unsigned char));
-        dim3 threadsPerBlock(16, 16);
-        dim3 numBlocks((images[i].width + threadsPerBlock.x - 1) / threadsPerBlock.x, (images[i].height + threadsPerBlock.y - 1) / threadsPerBlock.y);
-        convolve<<<numBlocks, threadsPerBlock>>>((unsigned char *)images[i].data, d_kernels, kernel_sizes, images[i].width, images[i].height, (unsigned char *)output_images[i].data);
-        cudaMemcpy(output_images[i].data, d_output_image, images[i].width * images[i].height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
-        {
-            cudaFree(d_image);
-            cudaFree(d_output_image);
-        }
-    }
-    cudaFree(d_kernels);
-}
-
 int main()
 {
     srand(0); // Seed the random number generator with the current time to get different random numbers each time the program is run
@@ -109,21 +83,21 @@ int main()
             // Loop through each kernel type
             for (int i = 0; i < num_sizes; i++)
             {
-                int kernel_sizes = kernel_sizes[i];
+                int kernel_size = kernel_sizes[i];
                 for (int j = 0; j < 3; j++)
                 {
                     double **kernel = NULL;
                     if (strcmp(kernel_names[i], "gauss") == 0)
                     {
-                        kernel = gauss_kernel(kernel_sizes[i]);
+                        kernel = gauss_kernel(kernel_size);
                     }
                     else if (strcmp(kernel_names[i], "unsharpen_mask") == 0)
                     {
-                        kernel = unsharpen_mask_kernel(kernel_sizes[i]);
+                        kernel = unsharpen_mask_kernel(kernel_size);
                     }
                     else if (strcmp(kernel_names[i], "mean") == 0)
                     {
-                        kernel = mean_kernel(kernel_sizes[i]);
+                        kernel = mean_kernel(kernel_size);
                     }
                     // Allocate memory for the output image
                     Image output_img;
@@ -133,13 +107,13 @@ int main()
                     malloc_image_data(&output_img);
                     // Allocate memory for the kernel on the GPU
                     double *d_kernel;
-                    cudaMalloc(&d_kernel, kernel_sizes * kernel_sizes * sizeof(double));
-                    cudaMemcpy(d_kernel, kernel, kernel_sizes * kernel_sizes * sizeof(double), cudaMemcpyHostToDevice);
+                    cudaMalloc(&d_kernel, kernel_size * kernel_size * sizeof(double));
+                    cudaMemcpy(d_kernel, kernel, kernel_size * kernel_size * sizeof(double), cudaMemcpyHostToDevice);
                     // Perform convolution
                     clock_t start_time = clock();
                     dim3 threadsPerBlock(16, 16); // You can adjust these values as needed
                     dim3 numBlocks((img.width + threadsPerBlock.x - 1) / threadsPerBlock.x, (img.height + threadsPerBlock.y - 1) / threadsPerBlock.y);
-                    convolve<<<numBlocks, threadsPerBlock>>>((unsigned char *)img.data, d_kernel, kernel_sizes, img.width, img.height, (unsigned char *)output_img.data);
+                    convolve<<<numBlocks, threadsPerBlock>>>((unsigned char *)img.data, d_kernel, kernel_size, img.width, img.height, (unsigned char *)output_img.data);
                     // convolve((unsigned char *)img.data[0], d_kernel, KERNEL_SIZE, img.width, img.height, (unsigned char *)output_img.data[0]);
                     clock_t end_time = clock();
                     double elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
@@ -148,7 +122,7 @@ int main()
                     FILE *f = fopen("parallel_gpu_time.md", "a");
                     if (f != NULL)
                     {
-                        int result = fprintf(f, "%s, %s, %f, %d\n", entry->d_name, kernel_names[i], elapsed_time, kernel_sizes);
+                        int result = fprintf(f, "%s, %s, %f, %d\n", entry->d_name, kernel_names[i], elapsed_time, kernel_size);
                         if (result < 0)
                         {
                             perror("Error writing to file");
