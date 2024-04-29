@@ -3,6 +3,10 @@
 
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Returns a 2D Gaussian kernel of size `size` x `size` with the given standard deviation `sigma`.
  * The returned memory must be freed by the caller (a single free for the whole kernel).
@@ -11,5 +15,9 @@
 double** gauss_kernel(int size);
 double** unsharpen_mask_kernel(int size);
 double** mean_kernel(int size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* KERNELS_H*/

@@ -6,7 +6,8 @@
  */
 
 /**
- * to compile: gcc-13 -o convolve_parallel_cpu convolve_parallel_cpu.c -lm -lpng -fopenmp
+ * to compile: gcc -o convolve_parallel_openmp convolve_parallel_openmp.c image.c kernels.c -lm -lpng 
+ * srun -n 1 --cpus-per-task=2 ./convolve_parallel_openmp
  */
 #include <stdio.h>
 #include <dirent.h>
@@ -71,6 +72,7 @@ void free_kernel(double **kernel)
 int main()
 {
     // omp_set_num_threads(4);
+    printf("Starting convolution...\n");
 
     srand(0); // Seed the random number generator with the current time to get different random numbers each time the program is run
     DIR *dir = opendir("images");
@@ -82,10 +84,13 @@ int main()
 
     // Array to store kernel names (assuming a limited number of kernels)
     char kernel_names[3][50] = {"gauss", "unsharpen_mask", "mean"};
-    int kernel_sizes[]= {3, 9, 15, 25, 49}
+    int kernel_sizes[]= {3, 9, 15, 25, 49};
+    printf("Reading images...\n");
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL)
     {
+         printf("Processing file: %s\n", entry->d_name);
+
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         {
             continue; // Skip "." and ".." entries
@@ -118,6 +123,7 @@ int main()
                 {
                     kernel = mean_kernel(kernel_sizes[j]);
                 }
+                printf("Processing file: %s with kernel: %s\n", entry->d_name, kernel_names[i]);
 
                 // Allocate memory for the output image
                 Image output_img;

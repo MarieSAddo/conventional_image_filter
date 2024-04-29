@@ -7,7 +7,9 @@
 #include "image.h"
 #include <time.h>
 #include "kernels.h"
-
+/*gcc -O3 -Wall -march=native convolve_serial_cpu.c kernels.c image.c -o convolve_serial_cpu -lpng -lm
+on a shared node ./convolve_serial_cpu
+*/
 
 int clamp(double value, int min, int max)
 {
@@ -60,6 +62,8 @@ void free_kernel(double **kernel)
 
 int main()
 {
+    printf("Starting convolution...\n");
+
     srand(0);
 
     // Open the "images" directory
@@ -75,10 +79,14 @@ int main()
 
     int kernel_sizes[] = { 3, 9, 15, 25, 49 };
 
+    printf("Reading images...\n");
+
     // Loop through all files in the directory
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL)
     {
+        printf("Processing file: %s\n", entry->d_name);
+
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         {
             continue; // Skip "." and ".." entries
@@ -111,6 +119,7 @@ int main()
                     {
                         kernel = mean_kernel(kernel_sizes[j]);
                     }
+                    printf("Processing image: %s with kernel: %s and kernel size: %d\n", entry->d_name, kernel_names[i], kernel_sizes[j]);
 
                     // Allocate memory for the output image
                     Image output_img;

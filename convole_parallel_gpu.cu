@@ -9,7 +9,7 @@
 #include <cuda_runtime.h>
 #include "kernels.h"
 #include "image.h"
-#include "kernels.c"
+
 
 // Macro check if CUDA call has an error, and if it does report it and exit the program
 #define CUDA_CHECK(call)                                                       \
