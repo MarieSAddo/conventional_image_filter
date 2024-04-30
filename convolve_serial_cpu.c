@@ -1,4 +1,6 @@
-// to compile 
+/* to compile this file use the following command gcc -O3 -Wall -march=native convolve_serial_cpu.c kernels.c image.c -o convolve_serial_cpu -lpng -lm
+* on a shared node  run ./convolve_serial_cpu
+*/ 
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h> // For directory handling
@@ -7,10 +9,14 @@
 #include "image.h"
 #include <time.h>
 #include "kernels.h"
-/*gcc -O3 -Wall -march=native convolve_serial_cpu.c kernels.c image.c -o convolve_serial_cpu -lpng -lm
-on a shared node ./convolve_serial_cpu
-*/
 
+/**
+ * This function clamps a double value to the range [min, max] to ensure it is within the range of pixel values.
+ * @param value The value to clamp
+ * @param min The minimum value
+ * @param max The maximum value
+ * @return The clamped value
+*/
 int clamp(double value, int min, int max)
 {
     if (value < min)
@@ -21,6 +27,16 @@ int clamp(double value, int min, int max)
         return (int)value;
 }
 
+/**
+ * This function performs convolution on an image using a given kernel.
+ * It takes an input image, a kernel, kernelsize and an output image as arguments.
+ * The function convolves the input image with the kernel and stores the result in the output image.
+ * @param img The input image
+ * @param kernel The kernel to use for convolution
+ * @param kernel_size The size of the kernel
+ * @param output_img The output image
+ * @return void
+*/
 void convolve(Image *img, double **kernel, int kernel_size, Image *output_img)
 {
     // Perform convolution
@@ -55,11 +71,25 @@ void convolve(Image *img, double **kernel, int kernel_size, Image *output_img)
     }
 }
 
+/**
+ * This function frees the memory allocated for the kernel.
+ * @param kernel The kernel to free
+ * @return void
+*/
 void free_kernel(double **kernel)
 {
     free(kernel);
 }
 
+
+/**
+* The main function reads the images from the images directory. It has a list of kernel names and sizes. 
+* It loops through each image and each kernel type and size, references the kernel function, allocates memory for the output image, 
+* performs convolution on the image using the kernel, and writes the results to a markdown file.
+* The function returns 0 if the program runs successfully, otherwise it returns 1
+* @return 0 if the program runs successfully, otherwise 1
+* Included print statements to show the progress of the program
+*/
 int main()
 {
     printf("Starting convolution...\n");
@@ -135,7 +165,6 @@ int main()
                     double elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
 
                     // Write results to the markdown file
-                    // Write results to the markdown file
                     FILE *f = fopen("serial_cpu_time.md", "a");
                     if (f != NULL)
                     {
@@ -154,18 +183,11 @@ int main()
                     {
                         perror("Error opening file");
                     }
-                    // FILE *f = fopen("serial_cpu_time.md", "a");
-                    // if (f != NULL) {
-                    //     fprintf(f, "%s, %s, %f, %d\n", entry->d_name, kernel_names[i], elapsed_time, kernel_sizes[j]);
-                    //     fclose(f);
-                    // } else {
-                    //     printf("Error opening file!\n");
-                    // }
 
-                    // // Write the output image (optional)
-                    // char output_file[128];
-                    // sprintf(output_file, "output_%s_%s.png", entry->d_name, kernel_names[i]);
-                    // write_png_file(output_file, &output_img);
+                    // Write the output image (optional)
+                    char output_file[128];
+                    sprintf(output_file, "serialoutput_%s_%s.png", entry->d_name, kernel_names[i],kernel_sizes[j]);
+                    write_png_file(output_file, &output_img);
 
                     // Free memory
                     free_image_data(&output_img);

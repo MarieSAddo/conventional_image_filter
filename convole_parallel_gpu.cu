@@ -1,4 +1,7 @@
-// to compile this file use the following command in the terminal "nvcc convole_parallel_gpu.cu -lpng -o convole_parallel_gpu"
+/*
+* to compile this file use the following command in the terminal "nvcc convole_parallel_gpu.cu -lpng -o convole_parallel_gpu
+* make sure youre in a shared node with a GPU to run this file ./convole_parallel_gpu
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h> // For directory handling
@@ -24,9 +27,21 @@
         }                                                                      \
     } while (0)
 
-// #define KERNEL_SIZE 3
+
 
 // CUDA kernel for convolution which processes
+/**
+ * This function peforms a CUDA kernel for convolution which processes the image in parallel on the GPU.
+ * It takes a 2D image and a 2D kernel as input and applies the convolution operation to the image using the kernel.
+ * The convolution operation is applied to each pixel in the image in parallel by each thread in the GPU.
+ * @param d_image: The input image data 
+ * @param d_kernel: The kernel data 
+ * @param kernelSize: The size of the kernel
+ * @param width:The width of the image
+ * @param height: The height of the image
+ * @param d_output_image: The output image data
+ * 
+*/
 __global__ void convolve(unsigned char *d_image, double *d_kernel, int kernelSize, int width, int height, unsigned char *d_output_image)
 {
     int col = blockIdx.x * blockDim.x + threadIdx.x; // Column index of the pixel to process (x-coordinate)
@@ -51,6 +66,15 @@ __global__ void convolve(unsigned char *d_image, double *d_kernel, int kernelSiz
     }
 }
 
+
+/*
+* The main function reads the images from the images directory. It has a list of kernel names and sizes. 
+* It loops through each image and each kernel type and size, references the kernel function, allocates memory for the output image, 
+* performs convolution on the image using the kernel, and writes the results to a markdown file.
+* The function returns 0 if the program runs successfully, otherwise it returns 1
+* The results in the markdown file are from being run on the GPU
+* Included print statements to indicate if the main was sucessful running.
+*/
 int main()
 {
     srand(0); // Seed the random number generator with the current time to get different random numbers each time the program is run
@@ -70,7 +94,7 @@ int main()
     {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         {
-            continue; // Skip "." and ".." entries
+            continue; // Skip "." and ".." entries in the directory
         }
         // Check if the entry is a regular file (image)
         if (entry->d_type & DT_REG)
@@ -117,7 +141,7 @@ int main()
                     // convolve((unsigned char *)img.data[0], d_kernel, KERNEL_SIZE, img.width, img.height, (unsigned char *)output_img.data[0]);
                     clock_t end_time = clock();
                     double elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
-                    // Write results to the markdown file
+                    
                     // Write results to the markdown file
                     FILE *f = fopen("parallel_gpu_time.md", "a");
                     if (f != NULL)

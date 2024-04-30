@@ -1,11 +1,4 @@
 /**
- * Parallel implementation of image convolution using OpenMP
- * to compile this file, run the following:
- * gcc-13 -o convolve_parallel_cpu convolve_parallel_cpu.c -lm -lpng -fopenmp
- * mpirun -np 4 ./convolve_parallel_cpu 128 256 3
- */
-
-/**
  * to compile: gcc -o convolve_parallel_openmp convolve_parallel_openmp.c image.c kernels.c -lm -lpng 
  * srun -n 1 --cpus-per-task=2 ./convolve_parallel_openmp
  */
@@ -19,8 +12,13 @@
 #include <omp.h>
 #include <string.h>
 
-// #define KERNEL_SIZE 11
-
+/**
+ * This function clamps a double value to the range [min, max] to ensure it is within the range of pixel values.
+ * @param value The value to clamp
+ * @param min The minimum value
+ * @param max The maximum value
+ * @return The clamped value
+*/
 int clamp(double value, int min, int max)
 {
     if (value < min)
@@ -30,9 +28,20 @@ int clamp(double value, int min, int max)
     else
         return (int)value;
 }
+
+/**
+ * This function performs convolution on an image using a given kernel.
+ * It takes an input image, a kernel, kernelsize and an output image as arguments.
+ * The function convolves the input image with the kernel and stores the result in the output image.
+ * #pragma omp parallel for default(none) shared(img, kernel, kernel_size, output_img) 
+ * @param img The input image
+ * @param kernel The kernel to use for convolution
+ * @param kernel_size The size of the kernel
+ * @param output_img The output image
+ * @return void
+*/
 void convolve(Image *img, double **kernel, int kernel_size, Image *output_img)
 {
-    // int kernel_size_half = kernel_size / 2;
 // Perform convolution
 #pragma omp parallel for default(none) shared(img, kernel, kernel_size, output_img)
     for (int i = 0; i < img->height; i++) // Iterate over the rows of the image
@@ -69,9 +78,18 @@ void free_kernel(double **kernel)
     free(kernel);
 }
 
+
+/**
+* The main function reads the images from the images directory. It has a list of kernel names and sizes. 
+* It loops through each image and each kernel type and size, references the kernel function, allocates memory for the output image, 
+* performs convolution on the image using the kernel, and writes the results to a markdown file.
+* The function returns 0 if the program runs successfully, otherwise it returns 1
+* @return 0 if the program runs successfully, otherwise 1
+* Included print statements to show the progress of the program
+*/
 int main()
 {
-    // omp_set_num_threads(4);
+    
     printf("Starting convolution...\n");
 
     srand(0); // Seed the random number generator with the current time to get different random numbers each time the program is run
@@ -138,7 +156,6 @@ int main()
                 clock_t end_time = clock();
                 double elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
 
-                // Write results to the markdown file
                 // Write results to the markdown file
                 FILE *f = fopen("parallel_cpu_time.md", "a");
                 if (f != NULL)

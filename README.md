@@ -16,7 +16,7 @@ https://ulhpc-tutorials.readthedocs.io/en/latest/cuda/exercises/convolution/
 https://github.com/jasrodis/mpi-image-convolution
 https://github.com/KHvic/Image-Convolution-GPU-vs-CPU
 
-# Will add Project pdf to the project 
+
 
 Serial with CPU: assumes that you have a function to read the image 
 into a 2D array and a function to write the output image from a 2D array. The 
